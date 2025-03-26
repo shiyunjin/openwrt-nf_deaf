@@ -1,0 +1,4 @@
+config NF_DEAF
+    tristate "nf deaf kernel driver"
+    help
+        NF_DEAF
