@@ -9,7 +9,8 @@
 #define MARK_WR_ACKSEQ	BIT(15)
 #define MARK_WR_SEQ	BIT(14)
 #define MARK_WR_CHKSUM	BIT(13)
-#define MARK_REPEAT	GENMASK(12, 10)
+#define MARK_SYN_ONLY	BIT(12)
+#define MARK_REPEAT	GENMASK(11, 10)
 #define MARK_DELAY	GENMASK(9, 5)
 #define MARK_TTL	GENMASK(4, 0)
 
@@ -348,6 +349,7 @@ nf_deaf_postrouting_hook4(void *priv, struct sk_buff *skb,
 	struct iphdr *iph;
 	struct tcphdr *th;
 	u32 delay;
+	bool syn_only;
 
 	if (likely(FIELD_GET(MARK_MAGIC, skb->mark) != 0xdeaf))
 		return NF_ACCEPT;
@@ -368,6 +370,10 @@ nf_deaf_postrouting_hook4(void *priv, struct sk_buff *skb,
 	if (unlikely(nf_deaf_xmit4(skb, iph, th, state)))
 		return NF_DROP;
 
+	syn_only = FIELD_GET(MARK_SYN_ONLY, skb->mark);
+	if (likely(syn_only & !th->syn))
+		return NF_ACCEPT;
+
 	delay = FIELD_GET(MARK_DELAY, skb->mark);
 	if (unlikely(!delay))
 		return NF_ACCEPT;
@@ -382,6 +388,7 @@ nf_deaf_postrouting_hook6(void *priv, struct sk_buff *skb,
 	struct ipv6hdr *ip6h;
 	struct tcphdr *th;
 	u32 delay;
+	bool syn_only;
 
 	if (likely(FIELD_GET(MARK_MAGIC, skb->mark) != 0xdeaf))
 		return NF_ACCEPT;
@@ -398,6 +405,10 @@ nf_deaf_postrouting_hook6(void *priv, struct sk_buff *skb,
 
 	if (unlikely(nf_deaf_xmit6(skb, ip6h, th, state)))
 		return NF_DROP;
+
+	syn_only = FIELD_GET(MARK_SYN_ONLY, skb->mark);
+	if (likely(syn_only & !th->syn))
+		return NF_ACCEPT;
 
 	delay = FIELD_GET(MARK_DELAY, skb->mark);
 	if (unlikely(!delay))
